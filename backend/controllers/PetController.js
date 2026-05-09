@@ -149,7 +149,7 @@ module.exports = class PetController {
         const user = await getUserByToken(token)
 
         if(pet.user._id.toString() !== user._id.toString()){
-            return res.status(401).json({ message: "Não autorizado, Você não é o dono do pet."})
+            return res.status(403).json({ message: "Não autorizado, Você não é o dono do pet."})
         }
 
         await Pet.findByIdAndDelete(id)
@@ -157,7 +157,50 @@ module.exports = class PetController {
     }
 
     static async updatePet(req, res) {
-        res.status(200).json({ message: "Em breve..." })
+        const { name, age, weight, color } = req.body
+        const id = req.params.id
+        const images = req.files
+        const updatedData = {}
+
+        if(!mongoose.Types.ObjectId.isValid(id)){
+            return res.status(422).json({ message: "O id do pet é inválido."})
+        }
+
+        const pet = await Pet.findById(id)
+
+        if(!pet){
+            return res.status(404).json({ message: "Pet não encontrado."})
+        }
+
+        const token = getToken(req)
+        const user = await getUserByToken(token)
+
+        if(pet.user._id.toString() !== user._id.toString()){
+            return res.status(403).json({ message: "Não autorizado, Você não é o dono do pet."})
+        }
+        
+        if(name){
+            updatedData.name = name
+        }
+
+        if(age){
+            updatedData.age = age
+        }
+
+        if(weight){
+           updatedData.weight = weight
+        }
+
+        if(color){
+            updatedData.color = color
+        }
+        
+        if(req.files && req.files.length > 0){
+            updatedData.image = req.files.map((image) => image.filename)
+        }
+
+        await Pet.findByIdAndUpdate(id, updatedData, { new: true})
+        res.status(200).json({ message: "Pet atualizado com sucesso.", data: updatedData})
     }
 
     static async schedule(req, res) {
